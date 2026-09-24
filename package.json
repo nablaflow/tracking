@@ -1,7 +1,7 @@
 {
   "name": "@nablaflow/tracking",
   "version": "0.1.0",
-  "description": "Consent-aware tracking for PostHog and the Meta Pixel, driven by CookieYes",
+  "description": "Consent-aware tracking for PostHog, the Meta Pixel and the LinkedIn Insight Tag, driven by CookieYes",
   "license": "MIT",
   "type": "module",
   "exports": {
