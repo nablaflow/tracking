@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Package archives from npm pack
+*.tgz
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+
+# direnv
+.envrc
+.direnv/
+
+# Devenv
+.devenv/
+.devenv.flake.nix
+devenv.local.nix
+.pre-commit-config.yaml

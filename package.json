@@ -1,0 +1,24 @@
+{
+  "name": "@nablaflow/tracking",
+  "version": "0.1.0",
+  "description": "Consent-aware tracking for PostHog and the Meta Pixel, driven by CookieYes",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "posthog-js": "^1.434.11"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.1",
+    "posthog-js": "^1.434.12",
+    "vitest": "^5.0.1"
+  }
+}

@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  CACHIX_AUTH_TOKEN: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+  USER: runner
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        platform:
+          - arm64
+
+    runs-on: ["arc-runner-small-${{ matrix.platform }}"]
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: nablaflow
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: test
+        run: devenv test
