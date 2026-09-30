@@ -1,6 +1,6 @@
 # @nablaflow/tracking
 
-Consent-aware tracking for PostHog, the Meta Pixel and the LinkedIn Insight Tag. CookieYes gives the consent.
+Consent-aware tracking for PostHog, Google Ads, the Meta Pixel and the LinkedIn Insight Tag. CookieYes gives the consent.
 
 The library does not bundle its code. The bundler of the project, for example Vite, compiles the ES modules. The project must install `posthog-js`.
 
@@ -8,6 +8,7 @@ The library does not bundle its code. The bundler of the project, for example Vi
 
 ```js
 import {
+  createGoogleAdsVendor,
   createLinkedinVendor,
   createMetaVendor,
   createPosthogVendor,
@@ -21,6 +22,10 @@ startTracking([
     apiHost: 'https://eu.i.posthog.com',
     defaults: '2025-05-24',
   }),
+  createGoogleAdsVendor({
+    accountId: 'AW-...',
+    conversions: { lead_submitted: '<conversion label>' },
+  }),
   createMetaVendor({ pixelId: '...' }),
   createLinkedinVendor({ partnerId: '...' }),
 ])
@@ -30,11 +35,14 @@ track('lead_submitted', { form: 'book_demo' })
 
 Each vendor has a `name`, a consent `category` and an `anonymous` flag:
 
-| Vendor   | Category        | Anonymous | Without consent                  |
-| -------- | --------------- | --------- | -------------------------------- |
-| PostHog  | `analytics`     | yes       | Tracks with no cookies and no IP |
-| Meta     | `advertisement` | no        | Does not load                    |
-| LinkedIn | `advertisement` | no        | Does not load                    |
+| Vendor     | Category        | Anonymous | Without consent                  |
+| ---------- | --------------- | --------- | -------------------------------- |
+| PostHog    | `analytics`     | yes       | Tracks with no cookies and no IP |
+| Google Ads | `advertisement` | no        | Does not load                    |
+| Meta       | `advertisement` | no        | Does not load                    |
+| LinkedIn   | `advertisement` | no        | Does not load                    |
+
+The Google Ads vendor sends a conversion only for the events in `conversions`. It maps each event to the label of a conversion action, and it ignores the other events. It sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). A revoke denies them in the same page view. The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
 
 The LinkedIn vendor ignores `track`. A LinkedIn conversion needs a conversion id from Campaign Manager, not an event name.
 
