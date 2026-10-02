@@ -1,4 +1,4 @@
-export { consentFromEvent, hasConsent } from './cookieYes.js'
+export { consentFromEvent, hasConsent, loadCookieYes } from './cookieYes.js'
 export { createGoogleAdsVendor } from './googleAds.js'
 export { createLinkedinVendor } from './linkedin.js'
 export { createMetaVendor } from './meta.js'

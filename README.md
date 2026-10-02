@@ -50,6 +50,25 @@ A custom vendor is an object with the same three fields and the functions `start
 
 The library reloads the page when the visitor changes the consent. Each vendor therefore decides its mode one time, in `start`, at page load. After a withdraw, CookieYes removes the cookies of the rejected categories, if its cookie scan lists them.
 
+### Load CookieYes
+
+`loadCookieYes` adds the CookieYes banner script. Call it from a small script in the `<head>`, with `async`, so that the banner shows soon. Do not call it from the main bundle of the site if that bundle loads with `defer`.
+
+```js
+import { loadCookieYes } from '@nablaflow/tracking/cookieYes'
+
+loadCookieYes({
+  clientId: '<CookieYes client id>',
+  // Optional. Runs after CookieYes starts, so that CookieYes can block the
+  // scripts that it adds, for example GTM.
+  onLoad: () => {},
+})
+```
+
+Import it from `@nablaflow/tracking/cookieYes`, not from `@nablaflow/tracking`. The main entry also imports `posthog-js`, and the bundler keeps it in the head script: approximately 290 kB in place of approximately 300 bytes.
+
+A second call adds no second script, and its `onLoad` does not run.
+
 ## Development
 
 [devenv](https://devenv.sh) gives Node.js, npm and the formatters. To load the shell with direnv:

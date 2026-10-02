@@ -1,4 +1,27 @@
 const consentCookieName = 'cookieyes-consent'
+const scriptId = 'cookieyes'
+
+/**
+ * Adds the CookieYes banner script for the given CookieYes client id.
+ *
+ * Call it as early as possible in the page, for example from a small script
+ * with async in the <head>, so that the banner shows soon.
+ *
+ * onLoad runs after the CookieYes script runs. CookieYes then blocks scripts
+ * through its patch of document.createElement, so a script that onLoad adds,
+ * for example GTM, goes through the CookieYes block.
+ *
+ * A second call adds no second script, and its onLoad does not run.
+ */
+export const loadCookieYes = ({ clientId, onLoad }) => {
+  if (document.getElementById(scriptId)) return
+
+  const script = document.createElement('script')
+  script.id = scriptId
+  script.src = `https://cdn-cookieyes.com/client_data/${encodeURIComponent(clientId)}/script.js`
+  if (onLoad) script.addEventListener('load', onLoad)
+  document.head.appendChild(script)
+}
 
 /**
  * Reads one key from the CookieYes consent cookie.
