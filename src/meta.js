@@ -33,7 +33,7 @@ const addPixel = () => {
 }
 
 /**
- * Builds the Meta Pixel vendor for the tracking runtime.
+ * Builds the Meta Pixel vendor for startTracking.
  *
  * The pixel has no anonymous mode:
  * fbq('consent', 'revoke') only pauses the events, and the browser still

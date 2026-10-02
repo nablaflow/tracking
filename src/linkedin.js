@@ -27,7 +27,7 @@ const addInsightTag = (partnerId) => {
 }
 
 /**
- * Builds the LinkedIn Insight Tag vendor for the tracking runtime.
+ * Builds the LinkedIn Insight Tag vendor for startTracking.
  *
  * The Insight Tag has no anonymous mode and no call that pauses it. Thus the
  * tag does not load at all without consent.
@@ -60,7 +60,7 @@ export const createLinkedinVendor = ({ partnerId }) => {
     revoke: () => {},
 
     // LinkedIn conversions need a conversion id from Campaign Manager, not an
-    // event name. Thus the tag ignores the events of the runtime.
+    // event name. Thus the tag ignores the tracked events.
     track: () => {},
   }
 }

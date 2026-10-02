@@ -32,15 +32,15 @@ const addScript = (src) => {
 }
 
 /**
- * Builds the Google Ads vendor for the tracking runtime.
+ * Builds the Google Ads vendor for startTracking.
  *
  * gtag.js does not load without consent. With consent, the vendor sets the
  * consent state before the config, as Google requires. Unlike the Meta Pixel
  * and the LinkedIn Insight Tag, gtag.js stops the ad storage after a revoke
  * in the same page view.
  *
- * conversions maps a runtime event to the label of a Google Ads conversion
- * action. The runtime events that the map does not contain send nothing.
+ * conversions maps a tracked event to the label of a Google Ads conversion
+ * action. The tracked events that the map does not contain send nothing.
  *
  * scriptUrl lets the site load gtag.js from a first-party path, for example
  * through the Google tag gateway.

@@ -53,7 +53,7 @@ export const fullOptions = {
 }
 
 /**
- * Builds the PostHog vendor for the tracking runtime.
+ * Builds the PostHog vendor for startTracking.
  *
  * The token, apiHost and defaults go to posthog.init in both modes.
  * PostHog runs in anonymous mode without consent, so it is anonymous: true.

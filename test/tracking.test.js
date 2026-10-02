@@ -2,7 +2,7 @@
 // @vitest-environment-options { "url": "https://nablaflow.io/" }
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-// runtime.js keeps its state in the module, so each test loads a new copy.
+// tracking.js keeps its state in the module, so each test loads a new copy.
 //
 // jsdom keeps one document for the whole file, so the listener of each
 // earlier copy stays on it. Those listeners call only the fake vendors of
@@ -24,7 +24,7 @@ const clearConsentCookie = () => {
 const withConsent = 'consentid:abc123,consent:yes,action:yes,analytics:yes'
 const withoutConsent = 'consentid:abc123,consent:yes,action:yes,analytics:no'
 
-const fakeVendor = () => ({
+const fakeVendor = (fields = {}) => ({
   name: 'fake',
   category: 'analytics',
   anonymous: true,
@@ -32,7 +32,11 @@ const fakeVendor = () => ({
   grant: vi.fn(),
   revoke: vi.fn(),
   track: vi.fn(),
+  ...fields,
 })
+
+const adsVendor = () =>
+  fakeVendor({ name: 'ads', category: 'advertisement', anonymous: false })
 
 const sendConsent = (accepted) =>
   document.dispatchEvent(
@@ -43,9 +47,9 @@ const sendConsent = (accepted) =>
 
 beforeEach(async () => {
   vi.resetModules()
-  const runtime = await import('../src/runtime.js')
-  startTracking = runtime.startTracking
-  track = runtime.track
+  const tracking = await import('../src/tracking.js')
+  startTracking = tracking.startTracking
+  track = tracking.track
 })
 
 afterEach(() => {
@@ -117,6 +121,56 @@ describe('consent events', () => {
     expect(vendor.revoke).toHaveBeenCalledOnce()
   })
 
+  test('grants and revokes multiple times in the same page view', () => {
+    setConsentCookie(withoutConsent)
+    const calls = []
+    const vendor = fakeVendor({
+      grant: () => calls.push('grant'),
+      revoke: () => calls.push('revoke'),
+    })
+    startTracking([vendor])
+
+    for (const accepted of [
+      [],
+      ['analytics'],
+      ['analytics'],
+      [],
+      ['analytics'],
+    ]) {
+      sendConsent(accepted)
+    }
+
+    expect(calls).toEqual(['grant', 'revoke', 'grant'])
+  })
+
+  test('revokes every vendor on reject all, in the order of the vendor list', () => {
+    setConsentCookie(`${withConsent},advertisement:yes`)
+    const calls = []
+    const analytics = fakeVendor({ revoke: () => calls.push('fake') })
+    const ads = fakeVendor({
+      ...adsVendor(),
+      revoke: () => calls.push('ads'),
+    })
+    startTracking([analytics, ads])
+
+    sendConsent([])
+
+    expect(calls).toEqual(['fake', 'ads'])
+  })
+
+  test('changes only the vendor whose category changed', () => {
+    setConsentCookie(withoutConsent)
+    const analytics = fakeVendor()
+    const ads = adsVendor()
+    startTracking([analytics, ads])
+
+    sendConsent(['advertisement'])
+
+    expect(ads.grant).toHaveBeenCalledOnce()
+    expect(analytics.grant).not.toHaveBeenCalled()
+    expect(analytics.revoke).not.toHaveBeenCalled()
+  })
+
   test('does nothing for a returning visitor with the same consent', () => {
     setConsentCookie(withConsent)
     const vendor = fakeVendor()
@@ -148,6 +202,31 @@ describe('track', () => {
     expect(vendor.track).toHaveBeenCalledExactlyOnceWith('lead_submitted', {
       form: 'book_demo',
     })
+  })
+})
+
+describe('track and consent', () => {
+  test('sends to an anonymous vendor without consent, and not to the others', () => {
+    setConsentCookie(withoutConsent)
+    const analytics = fakeVendor()
+    const ads = adsVendor()
+    startTracking([analytics, ads])
+
+    track('lead_submitted')
+
+    expect(analytics.track).toHaveBeenCalledOnce()
+    expect(ads.track).not.toHaveBeenCalled()
+  })
+
+  test('sends to a vendor after consent for its category', () => {
+    setConsentCookie(withoutConsent)
+    const ads = adsVendor()
+    startTracking([ads])
+
+    sendConsent(['advertisement'])
+    track('lead_submitted')
+
+    expect(ads.track).toHaveBeenCalledOnce()
   })
 })
 
