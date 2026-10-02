@@ -73,5 +73,9 @@ export const createPosthogVendor = ({ token, apiHost, defaults }) => {
     },
 
     track: (event, properties) => posthog.capture(event, properties),
+
+    // The tracking identify calls this only with analytics consent, so
+    // PostHog runs in full mode and keeps the id.
+    identify: (id, properties) => posthog.identify(id, properties),
   }
 }

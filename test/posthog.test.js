@@ -19,6 +19,7 @@ vi.mock('posthog-js', () => ({
   default: {
     init: vi.fn().mockName('posthog.init'),
     capture: vi.fn().mockName('posthog.capture'),
+    identify: vi.fn().mockName('posthog.identify'),
     reset: vi.fn().mockName('posthog.reset'),
     set_config: vi.fn().mockName('posthog.set_config'),
   },
@@ -110,5 +111,16 @@ describe('track', () => {
     expect(posthog.capture).toHaveBeenCalledExactlyOnceWith('lead_submitted', {
       form: 'book_demo',
     })
+  })
+})
+
+describe('identify', () => {
+  test('sends the id and the person properties to PostHog', () => {
+    posthogVendor.identify('ada@example.com', { email: 'ada@example.com' })
+
+    expect(posthog.identify).toHaveBeenCalledExactlyOnceWith(
+      'ada@example.com',
+      { email: 'ada@example.com' },
+    )
   })
 })

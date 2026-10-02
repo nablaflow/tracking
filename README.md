@@ -12,6 +12,7 @@ import {
   createLinkedinVendor,
   createMetaVendor,
   createPosthogVendor,
+  identify,
   startTracking,
   track,
 } from '@nablaflow/tracking'
@@ -31,6 +32,7 @@ startTracking([
 ])
 
 track('lead_submitted', { form: 'book_demo' })
+identify('ada@example.com', { email: 'ada@example.com' })
 ```
 
 Each vendor has a `name`, a consent `category` and an `anonymous` flag:
@@ -46,7 +48,9 @@ The Google Ads vendor sends a conversion only for the events in `conversions`. I
 
 The LinkedIn vendor ignores `track`. A LinkedIn conversion needs a conversion id from Campaign Manager, not an event name.
 
-A custom vendor is an object with the same three fields and the functions `start(granted)` and `track(event, properties)`.
+A custom vendor is an object with the same three fields and the functions `start(granted)` and `track(event, properties)`. It can also have `identify(id, properties)`.
+
+`identify(id, properties)` links the visitor to a known id, for example an email address. Unlike `track`, it ignores `anonymous`: a vendor receives the identity only with consent for its category. Only the PostHog vendor has `identify`, so the call needs the `analytics` consent.
 
 The library reloads the page when the visitor changes the consent. Each vendor therefore decides its mode one time, in `start`, at page load. After a withdraw, CookieYes removes the cookies of the rejected categories, if its cookie scan lists them.
 

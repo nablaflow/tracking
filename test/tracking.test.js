@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 // earlier test does not add a reload to a later test.
 let startTracking
 let track
+let identify
 let reload
 let listeners
 
@@ -63,6 +64,7 @@ beforeEach(async () => {
   const tracking = await import('../src/tracking.js')
   startTracking = tracking.startTracking
   track = tracking.track
+  identify = tracking.identify
 })
 
 afterEach(() => {
@@ -234,6 +236,66 @@ describe('track', () => {
     track('lead_submitted')
 
     expect(ads.track).not.toHaveBeenCalled()
+  })
+})
+
+describe('identify', () => {
+  const identifyingVendor = (fields) =>
+    fakeVendor({ identify: vi.fn(), ...fields })
+
+  test('identifies with consent for the category of the vendor', () => {
+    setConsentCookie(withConsent)
+    const vendor = identifyingVendor()
+    startTracking([vendor])
+
+    identify('ada@example.com', { email: 'ada@example.com' })
+
+    expect(vendor.identify).toHaveBeenCalledExactlyOnceWith('ada@example.com', {
+      email: 'ada@example.com',
+    })
+  })
+
+  // track sends to an anonymous vendor without consent. identify must not.
+  test('does not identify an anonymous vendor without consent', () => {
+    setConsentCookie(withoutConsent)
+    const vendor = identifyingVendor({ anonymous: true })
+    startTracking([vendor])
+
+    identify('ada@example.com')
+
+    expect(vendor.identify).not.toHaveBeenCalled()
+  })
+
+  test('identifies only the vendors with consent for their category', () => {
+    setConsentCookie(`${withConsent},advertisement:no`)
+    const analytics = identifyingVendor()
+    const ads = identifyingVendor({
+      name: 'ads',
+      category: 'advertisement',
+      anonymous: false,
+    })
+    startTracking([analytics, ads])
+
+    identify('ada@example.com')
+
+    expect(analytics.identify).toHaveBeenCalledOnce()
+    expect(ads.identify).not.toHaveBeenCalled()
+  })
+
+  test('skips a vendor that has no identify function', () => {
+    setConsentCookie(withConsent)
+    startTracking([fakeVendor()])
+
+    expect(() => identify('ada@example.com')).not.toThrow()
+  })
+
+  test('does nothing before startTracking', () => {
+    const vendor = identifyingVendor()
+
+    identify('ada@example.com')
+    startTracking([vendor])
+
+    expect(vendor.identify).not.toHaveBeenCalled()
   })
 })
 

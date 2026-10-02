@@ -60,3 +60,17 @@ export const track = (event, properties) => {
     }
   }
 }
+
+/**
+ * Links the visitor to a known id, for example an email address, with the
+ * given person properties.
+ */
+export const identify = (id, properties) => {
+  if (!consent) return
+
+  for (const v of vendors) {
+    if (v.identify && consent[v.category] === true) {
+      v.identify(id, properties)
+    }
+  }
+}
