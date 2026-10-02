@@ -42,11 +42,13 @@ Each vendor has a `name`, a consent `category` and an `anonymous` flag:
 | Meta       | `advertisement` | no        | Does not load                    |
 | LinkedIn   | `advertisement` | no        | Does not load                    |
 
-The Google Ads vendor sends a conversion only for the events in `conversions`. It maps each event to the label of a conversion action, and it ignores the other events. It sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). A revoke denies them in the same page view. The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
+The Google Ads vendor sends a conversion only for the events in `conversions`. It maps each event to the label of a conversion action, and it ignores the other events. It sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
 
 The LinkedIn vendor ignores `track`. A LinkedIn conversion needs a conversion id from Campaign Manager, not an event name.
 
-A custom vendor is an object with the same three fields and the functions `start(granted)`, `grant()`, `revoke()` and `track(event, properties)`.
+A custom vendor is an object with the same three fields and the functions `start(granted)` and `track(event, properties)`.
+
+The library reloads the page when the visitor changes the consent. Each vendor therefore decides its mode one time, in `start`, at page load. After a withdraw, CookieYes removes the cookies of the rejected categories, if its cookie scan lists them.
 
 ## Development
 

@@ -30,34 +30,18 @@ const addInsightTag = (partnerId) => {
  * Builds the LinkedIn Insight Tag vendor for startTracking.
  *
  * The Insight Tag has no anonymous mode and no call that pauses it. Thus the
- * tag does not load at all without consent.
+ * tag does not load at all without consent. After a withdraw, the page
+ * reloads, and start does not load it.
  */
 export const createLinkedinVendor = ({ partnerId }) => {
-  let loaded = false
-
-  const loadInsightTag = () => {
-    addInsightTag(partnerId)
-    loaded = true
-  }
-
   return {
     name: 'linkedin',
     category: 'advertisement',
     anonymous: false,
 
     start: (granted) => {
-      if (granted) loadInsightTag()
+      if (granted) addInsightTag(partnerId)
     },
-
-    // The visitor can grant again after a revoke in the same page view.
-    // The tag then already runs, so there is nothing to do.
-    grant: () => {
-      if (!loaded) loadInsightTag()
-    },
-
-    // A script that loaded cannot be removed, and the tag has no call that
-    // pauses it. After the reload, start does not load it.
-    revoke: () => {},
 
     // LinkedIn conversions need a conversion id from Campaign Manager, not an
     // event name. Thus the tag ignores the tracked events.

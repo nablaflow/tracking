@@ -34,20 +34,14 @@ export const startTracking = (list) => {
   // When consent is changed through the CookieYes interface
   // CookieYes sends this event.
   document.addEventListener('cookieyes_consent_update', (e) => {
-    // Save the old consent object
-    const before = consent
     // Retrieve the new consent object after the user change
-    consent = consentFromEvent(e.detail, categories)
-
-    // Loop through the vendors and check which one has changed consent:
-    // grant and revoke based on that.
-    for (const v of vendors) {
-      const grantedBefore = before[v.category] === true
-      const grantedNow = consent[v.category] === true
-
-      if (grantedNow && !grantedBefore) v.grant()
-      if (grantedBefore && !grantedNow) v.revoke()
-    }
+    const newConsent = consentFromEvent(e.detail, categories)
+    // Check if the consent has changed for any category
+    const hasChanges = categories.some((c) => newConsent[c] !== consent[c])
+    // If the consent has changed force a page reload. Each vendor then
+    // decides its mode in start. This can also be set in the CookieYes
+    // dashboard, but doing it here prevents configuration mistakes.
+    if (hasChanges) location.reload()
   })
 }
 

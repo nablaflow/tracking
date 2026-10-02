@@ -12,9 +12,6 @@ export const anonymizeEvent = (event) => {
 
 /**
  * Options that keep the visitor anonymous.
- *
- * The anonymous init and the consent downgrade both use this object: a visitor who
- * withdraws consent then gets the same options as a visitor who never gave it.
  */
 export const anonymousOptions = {
   disable_session_recording: true,
@@ -41,9 +38,8 @@ export const anonymousOptions = {
 
 /**
  * Options that identify the visitor.
- *
- * The full init and the upgrade both use this object. It sets every key that
- * anonymousOptions sets, so the two objects stay exact opposites.
+ * It sets every key that anonymousOptions sets, so the two objects stay
+ * exact opposites.
  */
 export const fullOptions = {
   disable_session_recording: false,
@@ -57,6 +53,8 @@ export const fullOptions = {
  *
  * The token, apiHost and defaults go to posthog.init in both modes.
  * PostHog runs in anonymous mode without consent, so it is anonymous: true.
+ * After a withdraw, the page reloads, and CookieYes removes the PostHog
+ * cookie and Local Storage key of the full mode.
  */
 export const createPosthogVendor = ({ token, apiHost, defaults }) => {
   // Options that both init paths share.
@@ -72,20 +70,6 @@ export const createPosthogVendor = ({ token, apiHost, defaults }) => {
     start: (granted) => {
       const modeOptions = granted ? fullOptions : anonymousOptions
       posthog.init(token, { ...baseOptions, ...modeOptions })
-    },
-
-    // Changes to full tracking without a restart of PostHog.
-    grant: () => {
-      posthog.set_config(fullOptions)
-      posthog.capture('opt_in')
-    },
-
-    // Returns to anonymous tracking without a restart of PostHog.
-    revoke: () => {
-      // Capture before the downgrade, because the downgrade clears the id.
-      posthog.capture('opt_out')
-      posthog.reset()
-      posthog.set_config(anonymousOptions)
     },
 
     track: (event, properties) => posthog.capture(event, properties),

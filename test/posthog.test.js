@@ -103,34 +103,6 @@ describe('start', () => {
   })
 })
 
-describe('grant', () => {
-  test('changes to the full options, then records opt_in', () => {
-    posthogVendor.grant()
-
-    expect(posthog.set_config).toHaveBeenCalledExactlyOnceWith(fullOptions)
-    expect(posthog.capture).toHaveBeenCalledExactlyOnceWith('opt_in')
-    expect(posthog.set_config).toHaveBeenCalledBefore(posthog.capture)
-  })
-})
-
-describe('revoke', () => {
-  // reset() clears the id, so PostHog must record opt_out before it.
-  test('records opt_out before the reset', () => {
-    posthogVendor.revoke()
-
-    expect(posthog.capture).toHaveBeenCalledExactlyOnceWith('opt_out')
-    expect(posthog.capture).toHaveBeenCalledBefore(posthog.reset)
-  })
-
-  test('returns to the anonymous options after the reset', () => {
-    posthogVendor.revoke()
-
-    expect(posthog.reset).toHaveBeenCalledOnce()
-    expect(posthog.set_config).toHaveBeenCalledExactlyOnceWith(anonymousOptions)
-    expect(posthog.reset).toHaveBeenCalledBefore(posthog.set_config)
-  })
-})
-
 describe('track', () => {
   test('sends the event and its properties to PostHog', () => {
     posthogVendor.track('lead_submitted', { form: 'book_demo' })

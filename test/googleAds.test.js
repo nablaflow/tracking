@@ -109,49 +109,6 @@ describe('start', () => {
   })
 })
 
-describe('grant', () => {
-  test('loads gtag.js when it did not load at page load', () => {
-    googleAdsVendor.start(false)
-
-    googleAdsVendor.grant()
-
-    expect(gtagScripts()).toHaveLength(1)
-    expect(queuedCalls()).toEqual(loadCalls)
-  })
-
-  test('only grants the consent again after a revoke', () => {
-    googleAdsVendor.start(true)
-    googleAdsVendor.revoke()
-
-    googleAdsVendor.grant()
-
-    expect(gtagScripts()).toHaveLength(1)
-    expect(queuedCalls()).toEqual([
-      ...loadCalls,
-      ['consent', 'update', denied],
-      ['consent', 'update', granted],
-    ])
-  })
-})
-
-describe('revoke', () => {
-  test('denies the ad consent', () => {
-    googleAdsVendor.start(true)
-
-    googleAdsVendor.revoke()
-
-    expect(queuedCalls().at(-1)).toEqual(['consent', 'update', denied])
-  })
-
-  test('does nothing when gtag.js did not load', () => {
-    googleAdsVendor.start(false)
-
-    googleAdsVendor.revoke()
-
-    expect(window.gtag).toBeUndefined()
-  })
-})
-
 describe('track', () => {
   test('sends a conversion for an event in the map', () => {
     googleAdsVendor.start(true)

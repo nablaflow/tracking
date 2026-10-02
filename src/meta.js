@@ -38,17 +38,15 @@ const addPixel = () => {
  * The pixel has no anonymous mode:
  * fbq('consent', 'revoke') only pauses the events, and the browser still
  * downloads fbevents.js from Meta. Thus the pixel does not load at all
- * without consent.
+ * without consent. After a withdraw, the page reloads, and start does not
+ * load it.
  */
 export const createMetaVendor = ({ pixelId }) => {
-  let loaded = false
-
   // Loads the pixel and sends the PageView of this page.
   const loadPixel = () => {
     addPixel()
     window.fbq('init', pixelId)
     window.fbq('track', 'PageView')
-    loaded = true
   }
 
   return {
@@ -58,22 +56,6 @@ export const createMetaVendor = ({ pixelId }) => {
 
     start: (granted) => {
       if (granted) loadPixel()
-    },
-
-    // The visitor can grant again after a revoke in the same page view.
-    // The pixel then already runs, so only the consent changes.
-    grant: () => {
-      if (loaded) {
-        window.fbq('consent', 'grant')
-      } else {
-        loadPixel()
-      }
-    },
-
-    // A script that loaded cannot be removed. The revoke pauses the pixel
-    // until the page reloads. After the reload, start does not load it.
-    revoke: () => {
-      window.fbq('consent', 'revoke')
     },
 
     track: (event, properties) => window.fbq('trackCustom', event, properties),

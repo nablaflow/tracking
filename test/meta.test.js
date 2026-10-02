@@ -56,45 +56,6 @@ describe('start', () => {
   })
 })
 
-describe('grant', () => {
-  test('loads the pixel when it did not load at page load', () => {
-    metaVendor.start(false)
-
-    metaVendor.grant()
-
-    expect(pixelScripts()).toHaveLength(1)
-    expect(queuedCalls()).toEqual([
-      ['init', pixelId],
-      ['track', 'PageView'],
-    ])
-  })
-
-  test('only grants the consent again after a revoke', () => {
-    metaVendor.start(true)
-    metaVendor.revoke()
-
-    metaVendor.grant()
-
-    expect(pixelScripts()).toHaveLength(1)
-    expect(queuedCalls()).toEqual([
-      ['init', pixelId],
-      ['track', 'PageView'],
-      ['consent', 'revoke'],
-      ['consent', 'grant'],
-    ])
-  })
-})
-
-describe('revoke', () => {
-  test('pauses the pixel', () => {
-    metaVendor.start(true)
-
-    metaVendor.revoke()
-
-    expect(queuedCalls().at(-1)).toEqual(['consent', 'revoke'])
-  })
-})
-
 describe('track', () => {
   test('sends the event as a custom event', () => {
     metaVendor.start(true)

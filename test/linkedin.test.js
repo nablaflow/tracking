@@ -50,27 +50,6 @@ describe('start', () => {
   })
 })
 
-describe('grant', () => {
-  test('loads the tag when it did not load at page load', () => {
-    linkedinVendor.start(false)
-
-    linkedinVendor.grant()
-
-    expect(insightScripts()).toHaveLength(1)
-    expect(window._linkedin_data_partner_ids).toEqual([partnerId])
-  })
-
-  test('does not load the tag again after a revoke', () => {
-    linkedinVendor.start(true)
-    linkedinVendor.revoke()
-
-    linkedinVendor.grant()
-
-    expect(insightScripts()).toHaveLength(1)
-    expect(window._linkedin_data_partner_ids).toEqual([partnerId])
-  })
-})
-
 describe('track', () => {
   test('sends nothing', () => {
     linkedinVendor.start(true)

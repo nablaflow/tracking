@@ -4,11 +4,14 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 // tracking.js keeps its state in the module, so each test loads a new copy.
 //
-// jsdom keeps one document for the whole file, so the listener of each
-// earlier copy stays on it. Those listeners call only the fake vendors of
-// their own test, so they do not change the results of a later test.
+// jsdom keeps one document for the whole file. Each copy adds a listener to
+// it, and the listener calls location.reload. Thus each test records its
+// listeners and removes them after the test, so that the listener of an
+// earlier test does not add a reload to a later test.
 let startTracking
 let track
+let reload
+let listeners
 
 const cookieAttributes = '; path=/; domain=.nablaflow.io; SameSite=Strict'
 
@@ -29,8 +32,6 @@ const fakeVendor = (fields = {}) => ({
   category: 'analytics',
   anonymous: true,
   start: vi.fn(),
-  grant: vi.fn(),
-  revoke: vi.fn(),
   track: vi.fn(),
   ...fields,
 })
@@ -46,6 +47,18 @@ const sendConsent = (accepted) =>
   )
 
 beforeEach(async () => {
+  // jsdom does not allow a spy on location.reload, so the test replaces
+  // the global location.
+  reload = vi.fn()
+  vi.stubGlobal('location', { reload })
+
+  listeners = []
+  const addEventListener = document.addEventListener.bind(document)
+  vi.spyOn(document, 'addEventListener').mockImplementation((type, fn) => {
+    listeners.push([type, fn])
+    addEventListener(type, fn)
+  })
+
   vi.resetModules()
   const tracking = await import('../src/tracking.js')
   startTracking = tracking.startTracking
@@ -53,6 +66,9 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
+  for (const [type, fn] of listeners) document.removeEventListener(type, fn)
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   clearConsentCookie()
 })
 
@@ -84,102 +100,83 @@ describe('page load', () => {
 
     expect(vendor.start).toHaveBeenCalledExactlyOnceWith(true)
   })
+
+  test('starts each vendor with the consent of its own category', () => {
+    setConsentCookie(`${withConsent},advertisement:no`)
+    const analytics = fakeVendor()
+    const ads = adsVendor()
+
+    startTracking([analytics, ads])
+
+    expect(analytics.start).toHaveBeenCalledExactlyOnceWith(true)
+    expect(ads.start).toHaveBeenCalledExactlyOnceWith(false)
+  })
 })
 
 describe('consent events', () => {
-  test('grants when the visitor accepts', () => {
+  test('reloads when the visitor accepts', () => {
     setConsentCookie(withoutConsent)
-    const vendor = fakeVendor()
-    startTracking([vendor])
+    startTracking([fakeVendor()])
 
     sendConsent(['necessary', 'analytics'])
 
-    expect(vendor.grant).toHaveBeenCalledOnce()
+    expect(reload).toHaveBeenCalledOnce()
   })
 
-  // CookieYes sends consent updates when it starts, before any click.
-  test('ignores an event that does not change the consent', () => {
-    setConsentCookie(withoutConsent)
-    const vendor = fakeVendor()
-    startTracking([vendor])
-
-    sendConsent(['necessary'])
-
-    expect(vendor.grant).not.toHaveBeenCalled()
-    expect(vendor.revoke).not.toHaveBeenCalled()
-  })
-
-  test('revokes when the visitor rejects after accepting', () => {
-    setConsentCookie(withoutConsent)
-    const vendor = fakeVendor()
-    startTracking([vendor])
-
-    sendConsent(['necessary', 'analytics'])
-    sendConsent(['necessary'])
-
-    expect(vendor.grant).toHaveBeenCalledOnce()
-    expect(vendor.revoke).toHaveBeenCalledOnce()
-  })
-
-  test('grants and revokes multiple times in the same page view', () => {
-    setConsentCookie(withoutConsent)
-    const calls = []
-    const vendor = fakeVendor({
-      grant: () => calls.push('grant'),
-      revoke: () => calls.push('revoke'),
-    })
-    startTracking([vendor])
-
-    for (const accepted of [
-      [],
-      ['analytics'],
-      ['analytics'],
-      [],
-      ['analytics'],
-    ]) {
-      sendConsent(accepted)
-    }
-
-    expect(calls).toEqual(['grant', 'revoke', 'grant'])
-  })
-
-  test('revokes every vendor on reject all, in the order of the vendor list', () => {
-    setConsentCookie(`${withConsent},advertisement:yes`)
-    const calls = []
-    const analytics = fakeVendor({ revoke: () => calls.push('fake') })
-    const ads = fakeVendor({
-      ...adsVendor(),
-      revoke: () => calls.push('ads'),
-    })
-    startTracking([analytics, ads])
-
-    sendConsent([])
-
-    expect(calls).toEqual(['fake', 'ads'])
-  })
-
-  test('changes only the vendor whose category changed', () => {
-    setConsentCookie(withoutConsent)
-    const analytics = fakeVendor()
-    const ads = adsVendor()
-    startTracking([analytics, ads])
-
-    sendConsent(['advertisement'])
-
-    expect(ads.grant).toHaveBeenCalledOnce()
-    expect(analytics.grant).not.toHaveBeenCalled()
-    expect(analytics.revoke).not.toHaveBeenCalled()
-  })
-
-  test('does nothing for a returning visitor with the same consent', () => {
+  test('reloads when the visitor rejects after accepting', () => {
     setConsentCookie(withConsent)
-    const vendor = fakeVendor()
-    startTracking([vendor])
+    startTracking([fakeVendor()])
+
+    sendConsent(['necessary'])
+
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  // CookieYes sends a consent update when it starts, before any click.
+  test('does not reload for an event that does not change the consent', () => {
+    setConsentCookie(withoutConsent)
+    startTracking([fakeVendor()])
+
+    sendConsent(['necessary'])
+
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  test('does not reload for a returning visitor with the same consent', () => {
+    setConsentCookie(withConsent)
+    startTracking([fakeVendor()])
 
     sendConsent(['necessary', 'analytics'])
 
-    expect(vendor.grant).not.toHaveBeenCalled()
-    expect(vendor.revoke).not.toHaveBeenCalled()
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  test('reloads when only one of the categories changes', () => {
+    setConsentCookie(withConsent)
+    startTracking([fakeVendor(), adsVendor()])
+
+    sendConsent(['analytics', 'advertisement'])
+
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  test('ignores a category that no vendor uses', () => {
+    setConsentCookie(withoutConsent)
+    startTracking([fakeVendor()])
+
+    sendConsent(['necessary', 'functional'])
+
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  test('does not start the vendors again', () => {
+    setConsentCookie(withoutConsent)
+    const vendor = fakeVendor()
+    startTracking([vendor])
+
+    sendConsent(['analytics'])
+
+    expect(vendor.start).toHaveBeenCalledOnce()
   })
 })
 
@@ -203,9 +200,7 @@ describe('track', () => {
       form: 'book_demo',
     })
   })
-})
 
-describe('track and consent', () => {
   test('sends to an anonymous vendor without consent, and not to the others', () => {
     setConsentCookie(withoutConsent)
     const analytics = fakeVendor()
@@ -218,7 +213,19 @@ describe('track and consent', () => {
     expect(ads.track).not.toHaveBeenCalled()
   })
 
-  test('sends to a vendor after consent for its category', () => {
+  test('sends to a vendor with consent for its category', () => {
+    setConsentCookie(`${withoutConsent},advertisement:yes`)
+    const ads = adsVendor()
+    startTracking([ads])
+
+    track('lead_submitted')
+
+    expect(ads.track).toHaveBeenCalledOnce()
+  })
+
+  // The page reloads after a change, so the consent of the page load stays
+  // in force until then.
+  test('keeps the consent of the page load after a change', () => {
     setConsentCookie(withoutConsent)
     const ads = adsVendor()
     startTracking([ads])
@@ -226,12 +233,13 @@ describe('track and consent', () => {
     sendConsent(['advertisement'])
     track('lead_submitted')
 
-    expect(ads.track).toHaveBeenCalledOnce()
+    expect(ads.track).not.toHaveBeenCalled()
   })
 })
 
 describe('startTracking', () => {
-  test('a second call adds no second listener', () => {
+  test('a second call warns, and adds no second start or listener', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     setConsentCookie(withoutConsent)
     const vendor = fakeVendor()
     startTracking([vendor])
@@ -239,7 +247,8 @@ describe('startTracking', () => {
 
     sendConsent(['necessary', 'analytics'])
 
+    expect(warn).toHaveBeenCalledOnce()
     expect(vendor.start).toHaveBeenCalledOnce()
-    expect(vendor.grant).toHaveBeenCalledOnce()
+    expect(reload).toHaveBeenCalledOnce()
   })
 })

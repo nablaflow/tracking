@@ -35,9 +35,8 @@ const addScript = (src) => {
  * Builds the Google Ads vendor for startTracking.
  *
  * gtag.js does not load without consent. With consent, the vendor sets the
- * consent state before the config, as Google requires. Unlike the Meta Pixel
- * and the LinkedIn Insight Tag, gtag.js stops the ad storage after a revoke
- * in the same page view.
+ * consent state before the config, as Google requires. After a withdraw, the
+ * page reloads, and start does not load gtag.js.
  *
  * conversions maps a tracked event to the label of a Google Ads conversion
  * action. The tracked events that the map does not contain send nothing.
@@ -50,8 +49,6 @@ export const createGoogleAdsVendor = ({
   conversions,
   scriptUrl = defaultScriptUrl,
 }) => {
-  let loaded = false
-
   const loadGtag = () => {
     addGtag()
     window.gtag('consent', 'default', adConsent('denied'))
@@ -59,7 +56,6 @@ export const createGoogleAdsVendor = ({
     addScript(`${scriptUrl}?id=${encodeURIComponent(accountId)}`)
     window.gtag('js', new Date())
     window.gtag('config', accountId)
-    loaded = true
   }
 
   return {
@@ -69,20 +65,6 @@ export const createGoogleAdsVendor = ({
 
     start: (granted) => {
       if (granted) loadGtag()
-    },
-
-    // The visitor can grant again after a revoke in the same page view.
-    // gtag.js then already runs, so only the consent changes.
-    grant: () => {
-      if (loaded) {
-        window.gtag('consent', 'update', adConsent('granted'))
-      } else {
-        loadGtag()
-      }
-    },
-
-    revoke: () => {
-      if (loaded) window.gtag('consent', 'update', adConsent('denied'))
     },
 
     // send_to limits the conversion to this account, so that no other Google
