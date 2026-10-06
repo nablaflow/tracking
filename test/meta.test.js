@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createMetaVendor } from '../src/meta.js'
 
 const pixelId = '1234567890'
+const conversions = {
+  sign_up: 'CompleteRegistration',
+  aerocloud_sign_up: { custom: 'StartTrialAeroCloud' },
+}
 
 // Each vendor keeps its own state, so each test builds a new vendor.
 let metaVendor
@@ -21,7 +25,7 @@ beforeEach(() => {
   delete window.fbq
   delete window._fbq
 
-  metaVendor = createMetaVendor({ pixelId })
+  metaVendor = createMetaVendor({ pixelId, conversions })
 })
 
 describe('start', () => {
@@ -57,15 +61,44 @@ describe('start', () => {
 })
 
 describe('track', () => {
-  test('sends the event as a custom event', () => {
+  test('the vendor has no track', () => {
+    expect(metaVendor.track).toBeUndefined()
+  })
+})
+
+describe('convert', () => {
+  test('sends the standard event for a name in the map', () => {
     metaVendor.start(true)
 
-    metaVendor.track('lead_submitted', { form: 'book_demo' })
+    metaVendor.convert('sign_up', { value: 10, currency: 'EUR' })
+
+    expect(queuedCalls().at(-1)).toEqual([
+      'track',
+      'CompleteRegistration',
+      { value: 10, currency: 'EUR' },
+    ])
+  })
+
+  test('sends the custom event for a name with custom in the map', () => {
+    metaVendor.start(true)
+
+    metaVendor.convert('aerocloud_sign_up', { value: 10 })
 
     expect(queuedCalls().at(-1)).toEqual([
       'trackCustom',
-      'lead_submitted',
-      { form: 'book_demo' },
+      'StartTrialAeroCloud',
+      { value: 10 },
+    ])
+  })
+
+  test('sends nothing for a name that is not in the map', () => {
+    metaVendor.start(true)
+
+    metaVendor.convert('trial_click')
+
+    expect(queuedCalls()).toEqual([
+      ['init', pixelId],
+      ['track', 'PageView'],
     ])
   })
 })

@@ -38,15 +38,15 @@ const addScript = (src) => {
  * consent state before the config, as Google requires. After a withdraw, the
  * page reloads, and start does not load gtag.js.
  *
- * conversions maps a tracked event to the label of a Google Ads conversion
- * action. The tracked events that the map does not contain send nothing.
+ * conversions maps a conversion name to the label of a Google Ads conversion
+ * action. The vendor has no track: Google Ads receives only conversions.
  *
  * scriptUrl lets the site load gtag.js from a first-party path, for example
  * through the Google tag gateway.
  */
 export const createGoogleAdsVendor = ({
   accountId,
-  conversions,
+  conversions = {},
   scriptUrl = defaultScriptUrl,
 }) => {
   const loadGtag = () => {
@@ -68,12 +68,16 @@ export const createGoogleAdsVendor = ({
     },
 
     // send_to limits the conversion to this account, so that no other Google
-    // destination on the page receives it.
-    track: (event) => {
-      const label = conversions[event]
+    // destination on the page receives it. The properties can give a value,
+    // a currency or a transaction_id.
+    convert: (name, properties) => {
+      const label = conversions[name]
       if (!label) return
 
-      window.gtag('event', 'conversion', { send_to: `${accountId}/${label}` })
+      window.gtag('event', 'conversion', {
+        ...properties,
+        send_to: `${accountId}/${label}`,
+      })
     },
   }
 }

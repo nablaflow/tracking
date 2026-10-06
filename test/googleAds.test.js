@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createGoogleAdsVendor } from '../src/googleAds.js'
 
 const accountId = 'AW-123456789'
-const conversions = { 'aerocloud:demo_request': 'AbCdEfGh' }
+const conversions = { sign_up: 'AbCdEfGh' }
 
 // Each vendor keeps its own state, so each test builds a new vendor.
 let googleAdsVendor
@@ -109,11 +109,11 @@ describe('start', () => {
   })
 })
 
-describe('track', () => {
-  test('sends a conversion for an event in the map', () => {
+describe('convert', () => {
+  test('sends a conversion for a name in the map', () => {
     googleAdsVendor.start(true)
 
-    googleAdsVendor.track('aerocloud:demo_request', { form: 'book_demo' })
+    googleAdsVendor.convert('sign_up')
 
     expect(queuedCalls().at(-1)).toEqual([
       'event',
@@ -122,11 +122,39 @@ describe('track', () => {
     ])
   })
 
-  test('sends nothing for an event that is not in the map', () => {
+  test('sends the properties with the conversion', () => {
     googleAdsVendor.start(true)
 
-    googleAdsVendor.track('aerocloud:trial_click')
+    googleAdsVendor.convert('sign_up', { value: 10, currency: 'EUR' })
+
+    expect(queuedCalls().at(-1)).toEqual([
+      'event',
+      'conversion',
+      { value: 10, currency: 'EUR', send_to: `${accountId}/AbCdEfGh` },
+    ])
+  })
+
+  // A send_to in the properties must not send the conversion to another
+  // account.
+  test('keeps its own send_to', () => {
+    googleAdsVendor.start(true)
+
+    googleAdsVendor.convert('sign_up', { send_to: 'AW-999/other' })
+
+    expect(queuedCalls().at(-1)[2].send_to).toBe(`${accountId}/AbCdEfGh`)
+  })
+
+  test('sends nothing for a name that is not in the map', () => {
+    googleAdsVendor.start(true)
+
+    googleAdsVendor.convert('trial_click')
 
     expect(queuedCalls()).toEqual(loadCalls)
+  })
+})
+
+describe('track', () => {
+  test('the vendor has no track', () => {
+    expect(googleAdsVendor.track).toBeUndefined()
   })
 })

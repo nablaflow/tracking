@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 let startTracking
 let track
 let identify
+let convert
 let reload
 let listeners
 
@@ -65,6 +66,7 @@ beforeEach(async () => {
   startTracking = tracking.startTracking
   track = tracking.track
   identify = tracking.identify
+  convert = tracking.convert
 })
 
 afterEach(() => {
@@ -236,6 +238,85 @@ describe('track', () => {
     track('lead_submitted')
 
     expect(ads.track).not.toHaveBeenCalled()
+  })
+
+  test('skips a vendor that has no track function', () => {
+    setConsentCookie(`${withConsent},advertisement:yes`)
+    const ads = adsVendor()
+    delete ads.track
+    startTracking([ads])
+
+    expect(() => track('lead_submitted')).not.toThrow()
+  })
+})
+
+describe('convert', () => {
+  const convertingVendor = (fields) =>
+    fakeVendor({
+      name: 'ads',
+      category: 'advertisement',
+      anonymous: false,
+      convert: vi.fn(),
+      ...fields,
+    })
+
+  test('sends the conversion with consent for the category of the vendor', () => {
+    setConsentCookie(`${withoutConsent},advertisement:yes`)
+    const vendor = convertingVendor()
+    startTracking([vendor])
+
+    convert('sign_up', { value: 10 })
+
+    expect(vendor.convert).toHaveBeenCalledExactlyOnceWith('sign_up', {
+      value: 10,
+    })
+  })
+
+  // track sends to an anonymous vendor without consent. convert must not.
+  test('does not send to an anonymous vendor without consent', () => {
+    setConsentCookie(withoutConsent)
+    const vendor = convertingVendor({ category: 'analytics', anonymous: true })
+    startTracking([vendor])
+
+    convert('sign_up')
+
+    expect(vendor.convert).not.toHaveBeenCalled()
+  })
+
+  test('does not call track', () => {
+    setConsentCookie(`${withConsent},advertisement:yes`)
+    const vendor = convertingVendor()
+    startTracking([vendor])
+
+    convert('sign_up')
+
+    expect(vendor.track).not.toHaveBeenCalled()
+  })
+
+  test('track does not call convert', () => {
+    setConsentCookie(`${withConsent},advertisement:yes`)
+    const vendor = convertingVendor()
+    startTracking([vendor])
+
+    track('sign_up')
+
+    expect(vendor.convert).not.toHaveBeenCalled()
+  })
+
+  test('skips a vendor that has no convert function', () => {
+    setConsentCookie(withConsent)
+    startTracking([fakeVendor()])
+
+    expect(() => convert('sign_up')).not.toThrow()
+  })
+
+  test('does nothing before startTracking', () => {
+    const vendor = convertingVendor()
+
+    convert('sign_up')
+    startTracking([vendor])
+
+    expect(vendor.convert).not.toHaveBeenCalled()
   })
 })
 

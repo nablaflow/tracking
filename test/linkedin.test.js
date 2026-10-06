@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createLinkedinVendor } from '../src/linkedin.js'
 
 const partnerId = '1234567'
+const conversions = { sign_up: 7654321 }
 
 // Each vendor keeps its own state, so each test builds a new vendor.
 let linkedinVendor
@@ -17,7 +18,7 @@ beforeEach(() => {
   delete window.lintrk
   delete window._linkedin_data_partner_ids
 
-  linkedinVendor = createLinkedinVendor({ partnerId })
+  linkedinVendor = createLinkedinVendor({ partnerId, conversions })
 })
 
 describe('start', () => {
@@ -50,12 +51,26 @@ describe('start', () => {
   })
 })
 
-describe('track', () => {
-  test('sends nothing', () => {
+describe('convert', () => {
+  test('sends the conversion id for a name in the map', () => {
     linkedinVendor.start(true)
 
-    linkedinVendor.track('lead_submitted', { form: 'book_demo' })
+    linkedinVendor.convert('sign_up', { value: 10 })
+
+    expect(window.lintrk.q).toEqual([['track', { conversion_id: 7654321 }]])
+  })
+
+  test('sends nothing for a name that is not in the map', () => {
+    linkedinVendor.start(true)
+
+    linkedinVendor.convert('trial_click')
 
     expect(window.lintrk.q).toEqual([])
+  })
+})
+
+describe('track', () => {
+  test('the vendor has no track', () => {
+    expect(linkedinVendor.track).toBeUndefined()
   })
 })
