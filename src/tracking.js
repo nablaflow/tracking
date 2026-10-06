@@ -55,8 +55,26 @@ export const track = (event, properties) => {
   // for each vendor, run the track function only if it has
   // consent or if the vendor supports anonymous tracking
   for (const v of vendors) {
-    if (v.anonymous || consent[v.category] === true) {
+    if (v.track && (v.anonymous || consent[v.category] === true)) {
       v.track(event, properties)
+    }
+  }
+}
+
+/**
+ * Sends a conversion, for example a sign-up, to the vendors that measure
+ * campaigns. Each vendor maps the name to its own conversion id, and ignores
+ * a name that it does not map.
+ *
+ * Unlike track, it ignores anonymous: a vendor receives the conversion only
+ * with consent for its category.
+ */
+export const convert = (name, properties) => {
+  if (!consent) return
+
+  for (const v of vendors) {
+    if (v.convert && consent[v.category] === true) {
+      v.convert(name, properties)
     }
   }
 }

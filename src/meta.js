@@ -40,8 +40,15 @@ const addPixel = () => {
  * downloads fbevents.js from Meta. Thus the pixel does not load at all
  * without consent. After a withdraw, the page reloads, and start does not
  * load it.
+ *
+ * conversions maps a conversion name to a Meta event. A string is a standard
+ * event, for example { sign_up: 'CompleteRegistration' }. An object with
+ * custom is a custom event, for example
+ * { aerocloud_sign_up: { custom: 'StartTrialAeroCloud' } }.
+ *
+ * The vendor has no track: Meta receives only conversions.
  */
-export const createMetaVendor = ({ pixelId }) => {
+export const createMetaVendor = ({ pixelId, conversions = {} }) => {
   // Loads the pixel and sends the PageView of this page.
   const loadPixel = () => {
     addPixel()
@@ -58,6 +65,15 @@ export const createMetaVendor = ({ pixelId }) => {
       if (granted) loadPixel()
     },
 
-    track: (event, properties) => window.fbq('trackCustom', event, properties),
+    convert: (name, properties) => {
+      const event = conversions[name]
+      if (!event) return
+
+      if (event.custom) {
+        window.fbq('trackCustom', event.custom, properties)
+      } else {
+        window.fbq('track', event, properties)
+      }
+    },
   }
 }

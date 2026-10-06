@@ -32,8 +32,12 @@ const addInsightTag = (partnerId) => {
  * The Insight Tag has no anonymous mode and no call that pauses it. Thus the
  * tag does not load at all without consent. After a withdraw, the page
  * reloads, and start does not load it.
+ *
+ * conversions maps a conversion name to the id of a conversion in Campaign
+ * Manager. The vendor has no track: LinkedIn needs a conversion id, not an
+ * event name.
  */
-export const createLinkedinVendor = ({ partnerId }) => {
+export const createLinkedinVendor = ({ partnerId, conversions = {} }) => {
   return {
     name: 'linkedin',
     category: 'advertisement',
@@ -43,8 +47,11 @@ export const createLinkedinVendor = ({ partnerId }) => {
       if (granted) addInsightTag(partnerId)
     },
 
-    // LinkedIn conversions need a conversion id from Campaign Manager, not an
-    // event name. Thus the tag ignores the tracked events.
-    track: () => {},
+    convert: (name) => {
+      const conversionId = conversions[name]
+      if (!conversionId) return
+
+      window.lintrk('track', { conversion_id: conversionId })
+    },
   }
 }

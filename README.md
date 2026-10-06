@@ -8,6 +8,7 @@ The library does not bundle its code. The bundler of the project, for example Vi
 
 ```js
 import {
+  convert,
   createGoogleAdsVendor,
   createLinkedinVendor,
   createMetaVendor,
@@ -25,15 +26,29 @@ startTracking([
   }),
   createGoogleAdsVendor({
     accountId: 'AW-...',
-    conversions: { lead_submitted: '<conversion label>' },
+    conversions: { sign_up: '<conversion label>' },
   }),
-  createMetaVendor({ pixelId: '...' }),
-  createLinkedinVendor({ partnerId: '...' }),
+  createMetaVendor({
+    pixelId: '...',
+    conversions: { sign_up: 'CompleteRegistration' },
+  }),
+  createLinkedinVendor({
+    partnerId: '...',
+    conversions: { sign_up: 1234567 },
+  }),
 ])
 
-track('lead_submitted', { form: 'book_demo' })
+track('panel_opened', { panel: 'results' })
+convert('sign_up')
 identify('ada@example.com', { email: 'ada@example.com' })
 ```
+
+The library has 2 functions that send events:
+
+- `track(event, properties)` records an interaction for analytics.
+- `convert(name, properties)` tells the advertising platforms that a campaign worked, for example after a sign-up.
+
+`track` never sends a conversion, and `convert` never sends an analytics event. To have both, call both functions.
 
 Each vendor has a `name`, a consent `category` and an `anonymous` flag:
 
@@ -44,11 +59,24 @@ Each vendor has a `name`, a consent `category` and an `anonymous` flag:
 | Meta       | `advertisement` | no        | Does not load                    |
 | LinkedIn   | `advertisement` | no        | Does not load                    |
 
-The Google Ads vendor sends a conversion only for the events in `conversions`. It maps each event to the label of a conversion action, and it ignores the other events. It sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
+Each advertising vendor maps a conversion name to its own id in `conversions`, and ignores the names that the map does not contain:
 
-The LinkedIn vendor ignores `track`. A LinkedIn conversion needs a conversion id from Campaign Manager, not an event name.
+| Vendor     | Value in `conversions`                        | Call                                                  |
+| ---------- | --------------------------------------------- | ----------------------------------------------------- |
+| Google Ads | The label of a conversion action              | `gtag('event', 'conversion', { send_to, ...properties })` |
+| Meta       | A standard event, e.g. `CompleteRegistration` | `fbq('track', standardEvent, properties)`             |
+| Meta       | `{ custom: 'StartTrialAeroCloud' }`           | `fbq('trackCustom', customEvent, properties)`         |
+| LinkedIn   | The conversion id from Campaign Manager       | `lintrk('track', { conversion_id })`                  |
 
-A custom vendor is an object with the same three fields and the functions `start(granted)` and `track(event, properties)`. It can also have `identify(id, properties)`.
+The advertising vendors have no `track`: they receive only conversions. An analytics event never goes to an advertising platform.
+
+A Meta custom event needs the object form. A plain string is always a standard event, so a typo in a string does not become a custom event.
+
+The Google Ads vendor sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
+
+A custom vendor is an object with the same three fields and the function `start(granted)`. It can also have `track(event, properties)`, `convert(name, properties)` and `identify(id, properties)`.
+
+`convert(name, properties)` ignores `anonymous`, as `identify` does: a vendor receives the conversion only with consent for its category.
 
 `identify(id, properties)` links the visitor to a known id, for example an email address. Unlike `track`, it ignores `anonymous`: a vendor receives the identity only with consent for its category. Only the PostHog vendor has `identify`, so the call needs the `analytics` consent.
 
