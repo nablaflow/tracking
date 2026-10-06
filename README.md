@@ -74,6 +74,8 @@ A Meta custom event needs the object form. A plain string is always a standard e
 
 The Google Ads vendor sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
 
+With a reverse proxy, `apiHost` is the address of the proxy. Then also give `uiHost`, the address of the PostHog app, for example `https://eu.posthog.com`. Without it, the PostHog toolbar and the links to PostHog do not work.
+
 A custom vendor is an object with the same three fields and the function `start(granted)`. It can also have `track(event, properties)`, `convert(name, properties)` and `identify(id, properties)`.
 
 `convert(name, properties)` ignores `anonymous`, as `identify` does: a vendor receives the conversion only with consent for its category.

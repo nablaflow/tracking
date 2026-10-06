@@ -102,6 +102,27 @@ describe('start', () => {
       expect(options.defaults).toBe(config.defaults)
     }
   })
+
+  test('passes the ui host in both modes when it is given', () => {
+    const proxied = createPosthogVendor({
+      ...config,
+      uiHost: 'https://eu.posthog.com',
+    })
+
+    proxied.start(true)
+    proxied.start(false)
+
+    for (const [, options] of posthog.init.mock.calls) {
+      expect(options.ui_host).toBe('https://eu.posthog.com')
+    }
+  })
+
+  // An undefined ui_host could replace the default of PostHog.
+  test('sets no ui host when it is not given', () => {
+    posthogVendor.start(true)
+
+    expect(posthog.init.mock.calls[0][1]).not.toHaveProperty('ui_host')
+  })
 })
 
 describe('track', () => {

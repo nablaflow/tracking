@@ -52,13 +52,20 @@ export const fullOptions = {
  * Builds the PostHog vendor for startTracking.
  *
  * The token, apiHost and defaults go to posthog.init in both modes.
+ * uiHost is the address of the PostHog app. Give it when apiHost is a
+ * reverse proxy, so that the toolbar and the links to PostHog work.
  * PostHog runs in anonymous mode without consent, so it is anonymous: true.
  * After a withdraw, the page reloads, and CookieYes removes the PostHog
  * cookie and Local Storage key of the full mode.
  */
-export const createPosthogVendor = ({ token, apiHost, defaults }) => {
-  // Options that both init paths share.
-  const baseOptions = { api_host: apiHost, defaults }
+export const createPosthogVendor = ({ token, apiHost, uiHost, defaults }) => {
+  // Options that both init paths share. Without uiHost, PostHog keeps its
+  // default, so the key stays absent.
+  const baseOptions = {
+    api_host: apiHost,
+    ...(uiHost && { ui_host: uiHost }),
+    defaults,
+  }
 
   return {
     name: 'posthog',
