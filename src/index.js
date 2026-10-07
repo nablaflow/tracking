@@ -1,5 +1,6 @@
 export { consentFromEvent, hasConsent, loadCookieYes } from './cookieYes.js'
 export { createGoogleAdsVendor } from './googleAds.js'
+export { createGoogleAnalyticsVendor } from './googleAnalytics.js'
 export { createLinkedinVendor } from './linkedin.js'
 export { createMetaVendor } from './meta.js'
 export { createPosthogVendor } from './posthog.js'

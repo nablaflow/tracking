@@ -1,35 +1,12 @@
-const defaultScriptUrl = 'https://www.googletagmanager.com/gtag/js'
+import { addGtag, addScript, defaultScriptUrl } from './gtag.js'
 
-// Only the ad consent types. GTM can still load GA4 on the same page and read
-// the same dataLayer, so an analytics_storage value would change GA4 data.
+// Only the ad consent types. The Google Analytics vendor sets
+// analytics_storage, and each vendor sets only the types of its own category.
 const adConsent = (state) => ({
   ad_storage: state,
   ad_user_data: state,
   ad_personalization: state,
 })
-
-/**
- * Puts the gtag queue on window.dataLayer and window.gtag.
- * This is the official Google tag snippet in a readable form.
- */
-const addGtag = () => {
-  window.dataLayer = window.dataLayer || []
-  if (window.gtag) return
-
-  window.gtag = function () {
-    // biome-ignore lint/complexity/noArguments: gtag.js expects the arguments object.
-    window.dataLayer.push(arguments)
-  }
-}
-
-const addScript = (src) => {
-  if ([...document.scripts].some((s) => s.src === src)) return
-
-  const script = document.createElement('script')
-  script.async = true
-  script.src = src
-  document.head.appendChild(script)
-}
 
 /**
  * Builds the Google Ads vendor for startTracking.
