@@ -1,6 +1,6 @@
 # @nablaflow/tracking
 
-Consent-aware tracking for PostHog, Google Ads, the Meta Pixel and the LinkedIn Insight Tag. CookieYes gives the consent.
+Consent-aware tracking for PostHog, Google Analytics 4 (GA4), Google Ads, the Meta Pixel and the LinkedIn Insight Tag. CookieYes gives the consent.
 
 The library does not bundle its code. The bundler of the project, for example Vite, compiles the ES modules. The project must install `posthog-js`.
 
@@ -10,6 +10,7 @@ The library does not bundle its code. The bundler of the project, for example Vi
 import {
   convert,
   createGoogleAdsVendor,
+  createGoogleAnalyticsVendor,
   createLinkedinVendor,
   createMetaVendor,
   createPosthogVendor,
@@ -23,6 +24,9 @@ startTracking([
     token: 'phc_...',
     apiHost: 'https://eu.i.posthog.com',
     defaults: '2025-05-24',
+  }),
+  createGoogleAnalyticsVendor({
+    measurementIds: ['G-ZLKH89F9ZF', 'G-CQN2TTM8V4', 'G-J4GL3ETY5J'],
   }),
   createGoogleAdsVendor({
     accountId: 'AW-...',
@@ -55,6 +59,7 @@ Each vendor has a `name`, a consent `category` and an `anonymous` flag:
 | Vendor     | Category        | Anonymous | Without consent                  |
 | ---------- | --------------- | --------- | -------------------------------- |
 | PostHog    | `analytics`     | yes       | Tracks with no cookies and no IP |
+| GA4        | `analytics`     | no        | Does not load                    |
 | Google Ads | `advertisement` | no        | Does not load                    |
 | Meta       | `advertisement` | no        | Does not load                    |
 | LinkedIn   | `advertisement` | no        | Does not load                    |
@@ -72,7 +77,16 @@ The advertising vendors have no `track`: they receive only conversions. An analy
 
 A Meta custom event needs the object form. A plain string is always a standard event, so a typo in a string does not become a custom event.
 
-The Google Ads vendor sets only the ad consent types (`ad_storage`, `ad_user_data` and `ad_personalization`). The option `scriptUrl` loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
+The GA4 vendor sends each `track` event to all the properties in `measurementIds`. Each property also gets a `page_view` when gtag.js loads. The GA4 vendor has no `convert` and no `identify`: mark the key events in the GA4 admin. Google Analytics forbids personal data, for example an email address.
+
+The GA4 vendor and the Google Ads vendor share one `window.gtag`. Each vendor sets only the consent types of its category:
+
+- GA4 sets `analytics_storage`. It also turns off Google signals and ad personalization, because these use the ad cookies.
+- Google Ads sets `ad_storage`, `ad_user_data` and `ad_personalization`.
+
+Both vendors have the option `scriptUrl`. It loads gtag.js from another URL, for example a first-party path of the Google tag gateway.
+
+Do not also load GA4 from Google Tag Manager (GTM). If GTM keeps a Google tag for the same property, GA4 counts each page view 2 times.
 
 With a reverse proxy, `apiHost` is the address of the proxy. Then also give `uiHost`, the address of the PostHog app, for example `https://eu.posthog.com`. Without it, the PostHog toolbar and the links to PostHog do not work.
 
