@@ -145,3 +145,12 @@ describe('identify', () => {
     )
   })
 })
+
+describe('convert', () => {
+  // A rule: the server sends the business results, for example a
+  // sign-up, to PostHog. A convert in this vendor would count each result
+  // two times. See "convert never goes to PostHog" in the README.
+  test('the vendor has no convert', () => {
+    expect(posthogVendor.convert).toBeUndefined()
+  })
+})
