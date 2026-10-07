@@ -25,12 +25,17 @@ const configParams = {
  * names, for example aerocloud:demo_request, are not valid GA4 names, and the
  * GA4 reports need their existing names.
  *
+ * conversions maps a conversion name to GA4 event names in the same way. The
+ * vendor receives a conversion only with the analytics consent, as startTracking
+ * requires for a vendor that is not anonymous.
+ *
  * scriptUrl lets the site load gtag.js from a first-party path, for example
  * through the Google tag gateway.
  */
 export const createGoogleAnalyticsVendor = ({
   measurementIds,
   events = {},
+  conversions = {},
   scriptUrl = defaultScriptUrl,
 }) => {
   const loadGtag = () => {
@@ -42,6 +47,14 @@ export const createGoogleAnalyticsVendor = ({
     for (const id of measurementIds) window.gtag('config', id, configParams)
   }
 
+  // send_to limits the event to the GA4 properties, so that the Google Ads
+  // account on the same gtag does not receive it.
+  const send = (names, properties) => {
+    for (const name of [names ?? []].flat()) {
+      window.gtag('event', name, { ...properties, send_to: measurementIds })
+    }
+  }
+
   return {
     name: 'googleAnalytics',
     category: 'analytics',
@@ -51,14 +64,8 @@ export const createGoogleAnalyticsVendor = ({
       if (granted) loadGtag()
     },
 
-    // send_to limits the event to the GA4 properties, so that the Google Ads
-    // account on the same gtag does not receive it.
-    track: (event, properties) => {
-      const names = [events[event] ?? []].flat()
+    track: (event, properties) => send(events[event], properties),
 
-      for (const name of names) {
-        window.gtag('event', name, { ...properties, send_to: measurementIds })
-      }
-    },
+    convert: (name, properties) => send(conversions[name], properties),
   }
 }

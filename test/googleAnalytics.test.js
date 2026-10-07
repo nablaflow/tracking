@@ -8,6 +8,7 @@ const events = {
   'aerocloud:contact_request': 'aerocloud_contact',
   'aerocloud:demo_request': ['aerocloud_book_demo', 'generate_lead'],
 }
+const conversions = { aerocloud_sign_up: 'aerocloud_free_sign_up_complete' }
 
 // Each vendor keeps its own state, so each test builds a new vendor.
 let googleAnalyticsVendor
@@ -42,6 +43,7 @@ beforeEach(() => {
   googleAnalyticsVendor = createGoogleAnalyticsVendor({
     measurementIds,
     events,
+    conversions,
   })
 })
 
@@ -55,9 +57,8 @@ describe('vendor', () => {
   })
 
   // Google Analytics forbids personal data, and identify gets an email.
-  test('the vendor has no identify and no convert', () => {
+  test('the vendor has no identify', () => {
     expect(googleAnalyticsVendor.identify).toBeUndefined()
-    expect(googleAnalyticsVendor.convert).toBeUndefined()
   })
 })
 
@@ -198,5 +199,36 @@ describe('track', () => {
     })
 
     expect(queuedCalls().at(-1)[2].send_to).toEqual(measurementIds)
+  })
+})
+
+describe('convert', () => {
+  test('sends the mapped conversion to each property', () => {
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.convert('aerocloud_sign_up', { value: 10 })
+
+    expect(queuedCalls().at(-1)).toEqual([
+      'event',
+      'aerocloud_free_sign_up_complete',
+      { value: 10, send_to: measurementIds },
+    ])
+  })
+
+  test('sends nothing for a conversion that is not in the map', () => {
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.convert('archiwind_sign_up')
+
+    expect(queuedCalls()).toEqual(loadCalls)
+  })
+
+  // The two maps are separate, so a track event never becomes a conversion.
+  test('ignores a track event name', () => {
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.convert('aerocloud:contact_request')
+
+    expect(queuedCalls()).toEqual(loadCalls)
   })
 })

@@ -81,7 +81,11 @@ The advertising vendors have no `track`: they receive only conversions. An analy
 
 A Meta custom event needs the object form. A plain string is always a standard event, so a typo in a string does not become a custom event.
 
-The GA4 vendor sends a `track` event to all the properties in `measurementIds`, only if `events` maps the event. The map gives the GA4 name of the event, or a list of names. With a list, GA4 receives one event for each name. The vendor ignores the events that the map does not contain. A GA4 event name can contain only letters, digits and underscores, so a site name such as `aerocloud:demo_request` needs the map. Each property also gets a `page_view` when gtag.js loads. The GA4 vendor has no `convert` and no `identify`: mark the key events in the GA4 admin. Google Analytics forbids personal data, for example an email address.
+The GA4 vendor sends a `track` event to all the properties in `measurementIds`, only if `events` maps the event. The map gives the GA4 name of the event, or a list of names. With a list, GA4 receives one event for each name. The vendor ignores the events that the map does not contain. A GA4 event name can contain only letters, digits and underscores, so a site name such as `aerocloud:demo_request` needs the map. Each property also gets a `page_view` when gtag.js loads.
+
+The GA4 vendor also has `convert`. Its `conversions` map works in the same way as `events`, for example `{ aerocloud_sign_up: 'aerocloud_free_sign_up_complete' }`. The 2 maps are separate, so a `track` event never becomes a conversion. Mark the key events in the GA4 admin.
+
+The GA4 vendor has no `identify`. Google Analytics forbids personal data, for example an email address.
 
 The GA4 vendor and the Google Ads vendor share one `window.gtag`. Each vendor sets only the consent types of its category:
 
@@ -97,6 +101,8 @@ With a reverse proxy, `apiHost` is the address of the proxy. Then also give `uiH
 A custom vendor is an object with the same three fields and the function `start(granted)`. It can also have `track(event, properties)`, `convert(name, properties)` and `identify(id, properties)`.
 
 `convert(name, properties)` ignores `anonymous`, as `identify` does: a vendor receives the conversion only with consent for its category.
+
+`convert` never goes to PostHog. The server sends the business results, for example a sign-up, to PostHog. A browser copy would count each result 2 times. A test in `test/posthog.test.js` fails if the PostHog vendor gets a `convert`.
 
 `identify(id, properties)` links the visitor to a known id, for example an email address. Unlike `track`, it ignores `anonymous`: a vendor receives the identity only with consent for its category. Only the PostHog vendor has `identify`, so the call needs the `analytics` consent.
 
