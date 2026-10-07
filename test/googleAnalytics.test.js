@@ -4,6 +4,10 @@ import { createGoogleAdsVendor } from '../src/googleAds.js'
 import { createGoogleAnalyticsVendor } from '../src/googleAnalytics.js'
 
 const measurementIds = ['G-AAAAAAAAAA', 'G-BBBBBBBBBB']
+const events = {
+  'aerocloud:contact_request': 'aerocloud_contact',
+  'aerocloud:demo_request': ['aerocloud_book_demo', 'generate_lead'],
+}
 
 // Each vendor keeps its own state, so each test builds a new vendor.
 let googleAnalyticsVendor
@@ -35,7 +39,10 @@ beforeEach(() => {
   delete window.gtag
   delete window.dataLayer
 
-  googleAnalyticsVendor = createGoogleAnalyticsVendor({ measurementIds })
+  googleAnalyticsVendor = createGoogleAnalyticsVendor({
+    measurementIds,
+    events,
+  })
 })
 
 describe('vendor', () => {
@@ -135,16 +142,50 @@ describe('start', () => {
 })
 
 describe('track', () => {
-  test('sends the event to each property', () => {
+  test('sends the mapped event to each property', () => {
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.track('aerocloud:contact_request', {
+      form_name: 'aerocloud_contact',
+    })
+
+    expect(queuedCalls().at(-1)).toEqual([
+      'event',
+      'aerocloud_contact',
+      { form_name: 'aerocloud_contact', send_to: measurementIds },
+    ])
+  })
+
+  test('sends one GA4 event for each name in a list', () => {
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.track('aerocloud:demo_request', { form_name: 'x' })
+
+    expect(queuedCalls().slice(-2)).toEqual([
+      [
+        'event',
+        'aerocloud_book_demo',
+        { form_name: 'x', send_to: measurementIds },
+      ],
+      ['event', 'generate_lead', { form_name: 'x', send_to: measurementIds }],
+    ])
+  })
+
+  test('sends nothing for an event that is not in the map', () => {
     googleAnalyticsVendor.start(true)
 
     googleAnalyticsVendor.track('panel_opened', { panel: 'results' })
 
-    expect(queuedCalls().at(-1)).toEqual([
-      'event',
-      'panel_opened',
-      { panel: 'results', send_to: measurementIds },
-    ])
+    expect(queuedCalls()).toEqual(loadCalls)
+  })
+
+  test('sends nothing without a map', () => {
+    googleAnalyticsVendor = createGoogleAnalyticsVendor({ measurementIds })
+    googleAnalyticsVendor.start(true)
+
+    googleAnalyticsVendor.track('aerocloud:contact_request')
+
+    expect(queuedCalls()).toEqual(loadCalls)
   })
 
   // A send_to in the properties must not send the event to the Google Ads
@@ -152,7 +193,9 @@ describe('track', () => {
   test('keeps its own send_to', () => {
     googleAnalyticsVendor.start(true)
 
-    googleAnalyticsVendor.track('panel_opened', { send_to: 'AW-123' })
+    googleAnalyticsVendor.track('aerocloud:contact_request', {
+      send_to: 'AW-123',
+    })
 
     expect(queuedCalls().at(-1)[2].send_to).toEqual(measurementIds)
   })

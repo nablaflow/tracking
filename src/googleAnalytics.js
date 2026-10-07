@@ -18,13 +18,19 @@ const configParams = {
  * page reloads, and start does not load gtag.js.
  *
  * measurementIds lists the GA4 properties. Each config sends a page_view, and
- * each track event goes to all the properties.
+ * each mapped event goes to all the properties.
+ *
+ * events maps a track event to one GA4 event name, or to a list of names. The
+ * vendor ignores a track event that the map does not contain. The site event
+ * names, for example aerocloud:demo_request, are not valid GA4 names, and the
+ * GA4 reports need their existing names.
  *
  * scriptUrl lets the site load gtag.js from a first-party path, for example
  * through the Google tag gateway.
  */
 export const createGoogleAnalyticsVendor = ({
   measurementIds,
+  events = {},
   scriptUrl = defaultScriptUrl,
 }) => {
   const loadGtag = () => {
@@ -48,7 +54,11 @@ export const createGoogleAnalyticsVendor = ({
     // send_to limits the event to the GA4 properties, so that the Google Ads
     // account on the same gtag does not receive it.
     track: (event, properties) => {
-      window.gtag('event', event, { ...properties, send_to: measurementIds })
+      const names = [events[event] ?? []].flat()
+
+      for (const name of names) {
+        window.gtag('event', name, { ...properties, send_to: measurementIds })
+      }
     },
   }
 }
