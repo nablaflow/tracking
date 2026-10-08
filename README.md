@@ -4,6 +4,8 @@ Consent-aware tracking for PostHog, Google Analytics 4 (GA4), Google Ads, the Me
 
 The library does not bundle its code. The bundler of the project, for example Vite, compiles the ES modules. The project must install `posthog-js`.
 
+> **Before you add or change an event, read [docs/events.md](docs/events.md).** It gives the rules for the website and the apps: which event goes to which tool, where the maps live, the consent, and how to test.
+
 ## Usage
 
 ```js
